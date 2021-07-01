@@ -1,0 +1,200 @@
+---
+title: "Técnicas de regresión Avanzadas en R"
+output: html_notebook
+---
+---
+# Resultados Kagel y Link a Video
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/f4o9aPFI3I0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+## Entrada 1, Step Wise Regression a Fuerza Bruta
+
+
+![Entry 1 - Step Wise Regression not optimized](entry_1.png)
+
+
+# Descripción del problema.
+
+Insertar descripción
+
+## Librerías a Utilizar
+
+```{r}
+library(ggplot2) #Visualization
+library(dplyr) 
+library(caret) # Feature engineering 
+library(ggcorrplot) #Simplificación de análisis de correlación
+
+```
+
+## Acerca del Data Set 
+
+```{r}
+train<-read.csv("train.csv")
+train<-train[ , c(10,2,3,4,5,6,7,8,9,11)]
+train
+```
+
+
+```{r}
+test<-read.csv("test.csv")
+test<-test[ , c(1:10)]
+test
+nrow(test)
+```
+
+## Integridad de los datos 
+
+
+```{r}
+# Structure 
+str(train)
+
+str(test)
+```
+## Feature Engineering 
+
+### Reemplazando NAs con Media de la columna.
+
+```{r}
+colsNA<-colnames(train)[!complete.cases(t(train))]
+colsNA
+
+# Replacing NA  in total_bedrooms with mean
+NA2mean <- function(x) replace(x, is.na(x), mean(x, na.rm = TRUE))
+train[] <- lapply(train, NA2mean)
+
+```
+Los NA Originales en la columna total_bedrooms son substituidos por el promedio de la columna, si es necesario esto se hará con la test data.
+
+### Encoding de variable categorica a numérica
+
+Usando Dummyvars de Caret codificamos las variables  de Ocean_proximity
+
+```{r}
+dmy <- dummyVars(" ~ .", data = train)
+train <- data.frame(predict(dmy, newdata = train))
+train
+```
+## NA substitution y encodding en test Data
+
+```{r}
+test[] <- lapply(test, NA2mean)
+
+dmy_test <- dummyVars(" ~ .", data = test)
+test <- data.frame(predict(dmy_test, newdata = test))
+test
+
+```
+
+
+
+# Análisis Estadística de los datos: métricas y gráficas sobre cada columna en el dataset
+
+
+```{r}
+summary(train)
+```
+
+
+# Análisis de correlación por medio de un gráfico con comentarios sobre los resultados.
+
+```{r}
+# Compute a correlation matrix
+data(train)
+corr <- round(cor(train), 1)
+head(corr[, 1:6])
+```
+
+
+```{r}
+p.mat <- cor_pmat(train)
+head(p.mat[, 1:4])
+```
+
+
+```{r}
+z <- ggcorrplot(corr, hc.order = TRUE, type = "lower",
+       outline.col = "white",
+       ggtheme = ggplot2::theme_gray,
+       #lab = TRUE,
+       colors = c("#6D9EC1", "white", "#E46726"))
+z + labs(title = "Correlation Matrix", subtitle = "Lower matrix")
+
+h <- ggcorrplot(corr, hc.order = TRUE, type = "lower",
+       outline.col = "white",
+       ggtheme = ggplot2::theme_gray,
+       lab = TRUE,
+       p.mat = p.mat,
+       #insig = "blank",
+       colors = c("#6D9EC1", "white", "#E46726"))
+h + labs(title = "Correlation Matrix", subtitle = "With Label")
+
+
+
+p <- ggcorrplot(corr, hc.order = TRUE, type = "lower",
+       outline.col = "white",
+       ggtheme = ggplot2::theme_gray,
+       #lab = TRUE,
+       p.mat = p.mat,
+       insig = "blank",
+       colors = c("#6D9EC1", "white", "#E46726"))
+p + labs(title = "Correlation Matrix", subtitle = "Significant Values Only")
+
+```
+
+# Estrategias de resolución, modelos a considerar y modificaciones de características de ser necesario.
+
+## Entrada 1 - Stepwise Regression
+Utilizaremos StepWise regresion para definir cual es el modelo de regresión miltiple que genera el menor grado de error.
+
+### Modelo
+
+```{r}
+lm1 <- lm(median_house_value ~ . , data = train)
+modelLm1 <- step(lm1)
+summary(modelLm1)
+```
+
+### Prediccion de Stepwise Regression
+
+```{r}
+predsLm1 <- predict(lm1, newdata = test)
+```
+
+### Submission for Kaggle
+Combine los archivos de predictions.csv y predictionsID.csv manualmente ya que aun no logro hacerlo con código
+
+```{r}
+write.csv(predsLm1, file = "predictions.csv")
+predictedLm1 <- test[ ,c(1)]
+write.csv(predictedLm1, file = "predictionsID.csv")
+```
+
+## Entrada 2 - Selección por correlación
+Utilizaremos StepWise regresion para definir cual es el modelo de regresión miltiple que genera el menor grado de error.
+
+### Modelo
+
+```{r}
+lm2<- lm(median_house_value ~ . , data = train)
+modLm2 <- step(lm2)
+summary(modLm2)
+```
+
+### Prediccion de Stepwise Regression
+
+```{r}
+predsLm2 <- predict(lm2, newdata = test)
+```
+
+### Submission for Kaggle
+Combine los archivos de predictions.csv y predictionsID.csv manualmente ya que aun no logro hacerlo con código
+
+```{r}
+write.csv(predsLm2, file = "predictions.csv")
+predictedLm2 <- test[ ,c(1)]
+write.csv(predictedLm2, file = "predictionsID.csv")
+
+
+
